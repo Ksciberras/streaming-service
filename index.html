@@ -9,26 +9,41 @@
       rel="stylesheet"
     />
     <script src="https://unpkg.com/video.js/dist/video.js"></script>
+    <script src="https://unpkg.com/axios@1.6.7/dist/axios.min.js"></script>
   </head>
   <body>
-    <h1>My First Heading</h1>
+    <h1>Videos</h1>
+    <ul id="videos"></ul>
 
-    <video
-      id="my_video_1"
-      class="video-js vjs-default-skin"
-      controls
-      preload="auto"
-      width="640"
-      height="264"
-      data-setup="{}"
-    >
-      <source
-        src="https://f47d-77-71-159-208.ngrok-free.app/video/output.m3u8"
-        type="application/x-mpegURL"
-      />
-    </video>
     <script>
-      var player = videojs("my_video_1");
+      const url = "{{.url}}";
+      async function getVideos() {
+        try {
+          const response = await axios.get(`${url}/videos`);
+          console.log(response.data);
+          return response.data; // This returns a promise that resolves to the data
+        } catch (error) {
+          console.error("Failed to fetch videos:", error);
+          return []; // Return an empty array in case of an error
+        }
+      }
+
+      async function createVideoList() {
+        const videos = await getVideos(); // Wait for the videos to be fetched
+        const videoList = document.getElementById("videos");
+        videoList.innerHTML = ""; // Clear existing entries
+
+        videos.forEach((video) => {
+          const li = document.createElement("li");
+          const a = document.createElement("a");
+          a.href = `${url}/v/${video.Id}`;
+          a.innerText = video.Title;
+          li.appendChild(a);
+          videoList.appendChild(li);
+        });
+      }
+
+      createVideoList(); // Call the function to populate the list
     </script>
   </body>
 </html>
