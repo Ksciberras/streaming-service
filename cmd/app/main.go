@@ -20,7 +20,7 @@ func main() {
 
 	db := db.Connect()
 
-	err := godotenv.Load("../../pkg/config/.env")
+	err := godotenv.Load("./pkg/config/.env")
 	if err != nil {
 		log.Fatal(err)
 	}

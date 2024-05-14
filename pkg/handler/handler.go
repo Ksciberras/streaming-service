@@ -23,6 +23,8 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	router.LoadHTMLFiles("../../web/index.html", "../../web/video.html")
 	router.StaticFS("/video", http.Dir("./hls"))
 
+	router.LoadHTMLFiles("./web/index.html", "./web/video.html")
+	router.StaticFS("../../video", http.Dir("./hls"))
 	router.GET("/", h.HandleTemplate)
 	router.GET("/v/:uuid", h.HandleVideoTemplate)
 	router.GET("/videos", h.AllVideos)
