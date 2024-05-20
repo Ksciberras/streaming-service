@@ -19,8 +19,6 @@ type VideoService struct {
 }
 type status string
 
-var l sync.Mutex
-
 func NewVideoService(db *gorm.DB) *VideoService {
 	return &VideoService{db: db}
 }
@@ -43,6 +41,8 @@ func (vs *VideoService) CheckAndCreateDirectory(path string) status {
 func (vs *VideoService) RunHlsScript(inputPath string, outputPath string) error {
 	log.Info("Running hls script")
 	cmd := exec.Command("ffmpeg", "-i", inputPath, "-profile:v", "baseline", "-level", "3.0", "-s", "640x360", "-start_number", "0", "-hls_time", "10", "-hls_list_size", "0", "-f", "hls", outputPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	err := cmd.Run()
 	if err != nil {
 		log.Fatal(err)
@@ -51,6 +51,10 @@ func (vs *VideoService) RunHlsScript(inputPath string, outputPath string) error 
 }
 
 func (vs *VideoService) ProcessVideosInDirectoryForStream(dirPath string) {
+	var wg sync.WaitGroup
+
+	var l sync.Mutex
+
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		log.Fatal(err)
@@ -65,10 +69,10 @@ func (vs *VideoService) ProcessVideosInDirectoryForStream(dirPath string) {
 	for _, file := range files {
 		log.Info(file.Name(), "isDir", file.IsDir())
 		if file.IsDir() && strings.HasSuffix(file.Name(), ".mp4") {
-			continue
+			// continue
 		}
-		l.Lock()
-		go vs.ProcessVideoForStream(file.Name(), dirPath)
+		wg.Add(1)
+		go vs.ProcessVideoForStream(file.Name(), dirPath, &wg, &l)
 
 	}
 }
@@ -96,26 +100,29 @@ func (vs *VideoService) FetchVideoById(id string) model.Video {
 	return video
 }
 
-func (vs *VideoService) ProcessVideoForStream(fileName string, dirPath string) {
-	log.Info("Processing video", fileName)
-	vs.ProcessVideosInDirectoryForStream("./hls")
+func (vs *VideoService) ProcessVideoForStream(fileName string, dirPath string, wg *sync.WaitGroup, l *sync.Mutex) {
+	defer wg.Done()
 
-	uuid := uuid.NewString()
+	log.Info("Processing video", fileName)
+
+	l.Lock()
+	uuid := uuid.New().String()
+	log.Info("New UUID ", uuid)
 
 	outputDirPath := fmt.Sprintf("./hls/%s", uuid)
 	status := vs.CheckAndCreateDirectory(outputDirPath)
 	if status == "exists" {
 		log.Info("Directory exists")
+		l.Unlock()
 		return
 	}
-
 	filePath := fmt.Sprintf("./%s/%s", dirPath, fileName)
 	outputPath := fmt.Sprintf("%s/%s.m3u8", outputDirPath, uuid)
 	err := vs.RunHlsScript(filePath, outputPath)
 	if err != nil {
 		log.Fatal(err)
 
-		panic(err)
+		l.Unlock()
 	}
 
 	log.Info("Adding video to database")

@@ -11,12 +11,13 @@ import (
 )
 
 type Handler struct {
+	loginService *service.LoginService
 	videoService *service.VideoService
 	serverUrl    string
 }
 
-func NewHandler(videoService *service.VideoService, serverUrl string) *Handler {
-	return &Handler{videoService: videoService, serverUrl: serverUrl}
+func NewHandler(videoService *service.VideoService, serverUrl string, loginService *service.LoginService) *Handler {
+	return &Handler{videoService: videoService, serverUrl: serverUrl, loginService: loginService}
 }
 
 func (h *Handler) SetupRoutes(router *gin.Engine) {
@@ -24,11 +25,20 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	router.StaticFS("/video", http.Dir("./hls"))
 
 	router.LoadHTMLFiles("./web/index.html", "./web/video.html")
-	router.StaticFS("../../video", http.Dir("./hls"))
+	router.StaticFS("../../videos", http.Dir("./hls"))
 	router.GET("/", h.HandleTemplate)
 	router.GET("/v/:uuid", h.HandleVideoTemplate)
 	router.GET("/videos", h.AllVideos)
 	router.GET("/dir", h.ProcessDir)
+
+	router.POST("/signup", h.handleSignUp)
+}
+
+func (h *Handler) handleSignUp(c *gin.Context) {
+	username := c.PostForm("username")
+	password := c.PostForm("password")
+	h.loginService.SignUp(username, password)
+	c.JSON(200, gin.H{"status": "success"})
 }
 
 func (h *Handler) HandleTemplate(c *gin.Context) {
@@ -55,5 +65,5 @@ func (h *Handler) AllVideos(c *gin.Context) {
 }
 
 func (h *Handler) ProcessDir(c *gin.Context) {
-	service.ProcessVideosInDirectoryForStream("./videos")
+	h.videoService.ProcessVideosInDirectoryForStream("./videos")
 }

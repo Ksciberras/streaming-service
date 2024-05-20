@@ -16,3 +16,14 @@ type VideoRequest struct {
 	Title string `json:"title"`
 	Path  string `json:"path"`
 }
+type User struct {
+	Id        string `gorm:"primaryKey"`
+	Username  string
+	Password  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}

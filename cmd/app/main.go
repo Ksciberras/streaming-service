@@ -28,7 +28,8 @@ func main() {
 	url := os.Getenv("SERVER_URL")
 
 	videoService := service.NewVideoService(db)
-	handler := handler.NewHandler(videoService, url)
+	loginService := service.NewLoginService(db)
+	handler := handler.NewHandler(videoService, url, loginService)
 	handler.SetupRoutes(router)
 
 	router.Run(port)

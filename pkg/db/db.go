@@ -17,7 +17,7 @@ func Connect() *gorm.DB {
 	}
 	log.Info("Connected to database")
 
-	db.AutoMigrate(&model.Video{})
+	db.AutoMigrate(&model.Video{}, &model.User{})
 
 	return db
 }
