@@ -18,7 +18,7 @@ type VideoRequest struct {
 }
 type User struct {
 	Id        string `gorm:"primaryKey"`
-	Username  string
+	Username  string `gorm:"unique"`
 	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time

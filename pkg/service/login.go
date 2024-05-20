@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -35,12 +36,13 @@ func (ls *LoginService) hashAndSalt(password string) string {
 	return string(hashedPassword)
 }
 
-func (ls *LoginService) SignUp(username string, password string) {
-	log.Info("Signing up user")
+func (ls *LoginService) SignUp(username string, password string) error {
+	log.Info(fmt.Sprintf("Logging in user: %s", username))
 
 	hashedPassword := ls.hashAndSalt(password)
 
 	user := model.User{
+		Id:       uuid.New().String(),
 		Username: username,
 		Password: hashedPassword,
 	}
@@ -48,8 +50,41 @@ func (ls *LoginService) SignUp(username string, password string) {
 	db := ls.db.Create(&user)
 	if db.Error != nil {
 		log.Error(fmt.Sprintf("Error while signing up user: %v", db.Error))
-		panic(db.Error)
+		return db.Error
 	}
 
 	log.Info("User signed up")
+	return nil
+}
+
+type PasswordStatus string
+
+const (
+	valid   PasswordStatus = "valid"
+	invalid PasswordStatus = "invalid"
+	noValue PasswordStatus = "no-value"
+)
+
+func (ls *LoginService) CheckPassword(storedPassword string, loginRequestPassword string) PasswordStatus {
+	err := bcrypt.CompareHashAndPassword([]byte(storedPassword), []byte(loginRequestPassword))
+	if err != nil {
+		log.Error(fmt.Sprintf("Error while logging in user: %v", err))
+		return "invalid"
+	}
+	return "valid"
+}
+
+func (ls *LoginService) Login(username string, password string) (PasswordStatus, model.User, error) {
+	log.Info(fmt.Sprintf("Logging in user: %s", username))
+	db := ls.db
+	var user model.User
+	db.First(&user, "username = ?", username)
+	if db.Error != nil {
+		log.Error(fmt.Sprintf("Error while logging in user: %v", db.Error))
+		return "novalue", user, db.Error
+	}
+
+	passwordValidation := ls.CheckPassword(user.Password, password)
+
+	return passwordValidation, user, nil
 }
