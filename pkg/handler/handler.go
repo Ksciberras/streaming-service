@@ -34,6 +34,15 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	router.POST("/signup", h.handleSignUp)
 	router.POST("/login", h.handleLogin)
 	router.GET("/logout", h.HandleLogout)
+
+	router.GET("/playlist", func(c *gin.Context) {
+		c.File("./playlist.m3u")
+	})
+
+	router.GET("/test", func(c *gin.Context) {
+		h.videoService.InitM3uPlaylist("./hls")
+		c.JSON(200, gin.H{"message": "Hello World"})
+	})
 }
 
 func isUserAuthenticated(c *gin.Context, tokenKey string) bool {
@@ -58,14 +67,14 @@ func (h *Handler) HandleTemplate(c *gin.Context) {
 }
 
 func (h *Handler) HandleVideoTemplate(c *gin.Context) {
-	isAuth := isUserAuthenticated(c, "token")
-	if !isAuth {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+	// isAuth := isUserAuthenticated(c, "token")
+	// if !isAuth {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	// 	return
+	// }
 	id := c.Param("uuid")
 	video := h.videoService.FetchVideoById(id)
-
+	log.Info(fmt.Sprintf("%s/video/%s/%s.m3u8", h.serverUrl, id, id))
 	c.HTML(200, "video.html", gin.H{
 		"title": video.Title,
 		"url":   h.serverUrl,
@@ -74,11 +83,11 @@ func (h *Handler) HandleVideoTemplate(c *gin.Context) {
 }
 
 func (h *Handler) AllVideos(c *gin.Context) {
-	isAuth := isUserAuthenticated(c, "token")
-	if !isAuth {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
+	// isAuth := isUserAuthenticated(c, "token")
+	// if !isAuth {
+	// 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+	// 	return
+	// }
 
 	log.Info("Fetching videos")
 	videos := h.videoService.FetchVideos()

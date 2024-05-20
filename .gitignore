@@ -2,3 +2,4 @@ hls/
 tmp/
 *.mp4
 *.db
+*.m3u
