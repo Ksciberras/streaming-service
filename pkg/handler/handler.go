@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/gin-gonic/gin"
 
-	"video_stream/pkg/model"
 	"video_stream/pkg/service"
 )
 
@@ -34,55 +33,22 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 
 	router.POST("/signup", h.handleSignUp)
 	router.POST("/login", h.handleLogin)
+	router.GET("/logout", h.HandleLogout)
 }
 
-func (h *Handler) handleLogin(c *gin.Context) {
-	var signIn model.LoginRequest
-	err := c.BindJSON(&signIn)
+func isUserAuthenticated(c *gin.Context, tokenKey string) bool {
+	token, err := c.Cookie(tokenKey)
 	if err != nil {
-		log.Error(fmt.Sprintf("Error while binding json: %v", err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
+		log.Error(fmt.Sprintf("Error while getting token: %v", err))
+		return false
 	}
-
-	log.Info(fmt.Sprintf("Logging in user: %s %s ", signIn.Username, signIn.Password))
-
-	passwordStatus, user, loginError := h.loginService.Login(signIn.Username, signIn.Password)
-	if loginError != nil {
-		log.Error(fmt.Sprintf("Error while logging in user: %v", loginError))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while logging in user"})
-		return
-	}
-	if passwordStatus == "invalid" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
-	if passwordStatus == "valid" {
-		c.JSON(200, gin.H{"message": fmt.Sprintf("User: %s succsefully logged in", signIn.Username), "user": user})
-		return
-	}
-}
-
-func (h *Handler) handleSignUp(c *gin.Context) {
-	var signUp model.LoginRequest
-
-	err := c.BindJSON(&signUp)
+	err = service.VerifyToken(token)
 	if err != nil {
-		log.Error(fmt.Sprintf("Error while binding json: %v", err))
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
+		log.Error(fmt.Sprintf("Error while verifying token: %v", err))
+		return false
+
 	}
-
-	log.Info(fmt.Sprintf("Signing up user: %s %s ", signUp.Username, signUp.Password))
-
-	loginErr := h.loginService.SignUp(signUp.Username, signUp.Password)
-	if loginErr != nil {
-		log.Error(fmt.Sprintf("Error while signing up user: %v", loginErr))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while signing up user"})
-		return
-	}
-
-	c.JSON(200, gin.H{"message": fmt.Sprintf("User: %s succsefully signed up", signUp.Username)})
+	return true
 }
 
 func (h *Handler) HandleTemplate(c *gin.Context) {
@@ -92,6 +58,11 @@ func (h *Handler) HandleTemplate(c *gin.Context) {
 }
 
 func (h *Handler) HandleVideoTemplate(c *gin.Context) {
+	isAuth := isUserAuthenticated(c, "token")
+	if !isAuth {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 	id := c.Param("uuid")
 	video := h.videoService.FetchVideoById(id)
 
@@ -103,6 +74,12 @@ func (h *Handler) HandleVideoTemplate(c *gin.Context) {
 }
 
 func (h *Handler) AllVideos(c *gin.Context) {
+	isAuth := isUserAuthenticated(c, "token")
+	if !isAuth {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	log.Info("Fetching videos")
 	videos := h.videoService.FetchVideos()
 	c.JSON(200, videos)
