@@ -127,7 +127,7 @@ func (vs *VideoService) ProcessVideoForStream(fileName string, dirPath string, w
 
 	log.Info("Adding video to database")
 
-	request := model.VideoRequest{Title: fileName, Path: outputPath}
+	request := model.VideoRequest{Title: fileName, Path: fmt.Sprintf("video/%s/%s.m3u8", uuid, uuid)}
 
 	vs.AddVideo(request, uuid)
 

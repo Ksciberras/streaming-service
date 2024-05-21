@@ -13,6 +13,18 @@ import (
 func (vs *VideoService) InitM3uPlaylist(videoDirectory string) {
 	db := vs.db
 	url := os.Getenv("SERVER_URL")
+	path := "/playlist.m3u"
+	if _, err := os.Stat(path); os.IsExist(err) {
+		log.Info("Directory exists")
+		log.Info(fmt.Sprintf("Removing file: %s", path))
+
+		err := os.Remove(path)
+		if err != nil {
+			log.Error(fmt.Sprintf("Error while removing file: %v", err))
+			return
+		}
+		fmt.Println("File removed")
+	}
 
 	files, err := os.ReadDir(videoDirectory)
 	if err != nil {

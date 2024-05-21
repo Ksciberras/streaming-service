@@ -38,11 +38,12 @@ func (h *Handler) SetupRoutes(router *gin.Engine) {
 	router.GET("/playlist", func(c *gin.Context) {
 		c.File("./playlist.m3u")
 	})
+	router.GET("/createplaylist", h.handleCreatePlaylist)
+}
 
-	router.GET("/test", func(c *gin.Context) {
-		h.videoService.InitM3uPlaylist("./hls")
-		c.JSON(200, gin.H{"message": "Hello World"})
-	})
+func (h *Handler) handleCreatePlaylist(c *gin.Context) {
+	h.videoService.InitM3uPlaylist("./hls")
+	c.JSON(200, gin.H{"message": "Playlist created"})
 }
 
 func isUserAuthenticated(c *gin.Context, tokenKey string) bool {
